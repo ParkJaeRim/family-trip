@@ -1,5 +1,5 @@
 'use strict';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ_AHXPdYNbZsC-u2o34936-t28IX_NhrXfQyREkHv-MYSrwmQlTGSmZijJBzZU6DPeg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzf_4VPITcqbX-Caabyamqh2zV4HUrYlTCF1fNBMSLGGTer6xh1t4oRRTgfvjICR6cKmA/exec';
 const TOKEN = 'lZFI9oLNB47unpvI7smWmrNSNvezVpVQ';
 const STORE = 'europe-trip-v1', INITIAL = 'web-initial';
 
@@ -124,7 +124,7 @@ window.TripNative = {
   api(id, body) { post(JSON.parse(body)).then(r => window.apiResult(id, JSON.stringify(r))); },
 };
 
-window.TripWeb = { logout() { localStorage.removeItem(STORE); localStorage.removeItem(INITIAL); location.reload(); } };
+window.TripWeb = { logout() { localStorage.removeItem(STORE); localStorage.removeItem(INITIAL); localStorage.removeItem('web-hotels'); location.reload(); } };
 
 // 일정 뼈대(날짜·도시·숙소 도시)를 코드에 넣지 않고, 로그인한 뒤 시트에서 만든다.
 function skeleton(schedRaw, bookRaw) {
@@ -163,12 +163,16 @@ function gate(message) {
 async function start(pw, role, sheetUrl) {
   document.querySelector('#app').innerHTML = '<main class="gate"><p class="sub">일정을 불러오는 중…</p></main>';
   let data;
+  const hotelsReq = post({ action: 'hotels', pw });
   try { data = await bootstrap(pw); localStorage.setItem(INITIAL, JSON.stringify(data)); }
   catch (e) {
-    if (e.message === 'password') { localStorage.removeItem(STORE); gate('비밀번호가 바뀌었어요. 다시 넣어 주세요.'); return; }
+    if (e.message === 'password') { localStorage.removeItem(STORE); localStorage.removeItem('web-hotels'); gate('비밀번호가 바뀌었어요. 다시 넣어 주세요.'); return; }
     try { data = JSON.parse(localStorage.getItem(INITIAL) || 'null'); } catch (x) { data = null; }
     if (!data) { gate('인터넷 연결을 확인해 주세요.'); return; }
   }
+  const h = await hotelsReq;
+  if (h.ok && h.hotels && typeof h.hotels === 'object') { window.HOTEL_PHOTOS = h.hotels; localStorage.setItem('web-hotels', JSON.stringify(h.hotels)); }
+  else { try { window.HOTEL_PHOTOS = JSON.parse(localStorage.getItem('web-hotels') || '{}'); } catch (e) {} }
   window.INITIAL_DATA = data;
   const saved = readStore();
   const prefs = { theme: 'dark', ...(saved?.prefs || {}), auth: { pw, role }, sheetLastSync: new Date().toISOString(), ...(sheetUrl ? { sheetUrl } : {}) };
