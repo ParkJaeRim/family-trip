@@ -1,0 +1,6 @@
+.gate{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+.gate-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:28px 22px}
+.gate-card .brand{font-size:28px;margin-bottom:6px}
+.gate-card .sub{margin:0 0 6px}
+.gate>.sub{font-size:16px}
+.top{padding-top:calc(20px + env(safe-area-inset-top))}
