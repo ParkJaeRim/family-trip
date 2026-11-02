@@ -1,6 +1,5 @@
 'use strict';
-// TODO: photos-script 배포 후 받은 웹 앱 URL을 넣는다. 비어 있으면 로그인할 수 없다.
-const SCRIPT_URL = '';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJ_AHXPdYNbZsC-u2o34936-t28IX_NhrXfQyREkHv-MYSrwmQlTGSmZijJBzZU6DPeg/exec';
 const TOKEN = 'lZFI9oLNB47unpvI7smWmrNSNvezVpVQ';
 const STORE = 'europe-trip-v1', INITIAL = 'web-initial';
 
