@@ -1,5 +1,5 @@
 'use strict';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzf_4VPITcqbX-Caabyamqh2zV4HUrYlTCF1fNBMSLGGTer6xh1t4oRRTgfvjICR6cKmA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCuIniJKTHncTuOgnCaUoZx-9KZzhIfHRvmgfAyGKQbWcqGwUDDlpEosN2cecEHBVV0w/exec';
 const TOKEN = 'lZFI9oLNB47unpvI7smWmrNSNvezVpVQ';
 const STORE = 'europe-trip-v1', INITIAL = 'web-initial';
 
@@ -85,6 +85,63 @@ async function pump() {
   } finally { pumping = false; }
 }
 
+// 아이폰 사파리는 사람이 누른 직후에만 공유 창을 열 수 있어서, 원본을 다 받은 뒤 버튼을 한 번 더 누르게 한다.
+const canShareFiles = (() => { try { return !!navigator.canShare?.({ files: [new File([''], 'a.jpg', { type: 'image/jpeg' })] }); } catch (e) { return false; } })();
+let saving = null;
+function driveOpen(fileId) { window.open('https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId), '_blank', 'noopener'); }
+function saveSheet() {
+  let d = document.querySelector('#save-sheet');
+  if (!d) { d = document.createElement('dialog'); d.id = 'save-sheet'; document.body.appendChild(d); }
+  return d;
+}
+// 원본을 한꺼번에 메모리에 올리면 사파리 탭이 죽을 수 있어 10장씩 나눠 공유한다.
+const SAVE_BATCH = 10;
+async function prepareSave(list) {
+  const d = saveSheet(), pw = readStore()?.prefs?.auth?.pw || '', rounds = Math.ceil(list.length / SAVE_BATCH);
+  let cancelled = false, missed = 0;
+  const stop = () => { cancelled = true; };
+  d.oncancel = stop; d.onclose = stop;
+  const show = (title, msg, buttons) => {
+    d.innerHTML = `<h2>${title}</h2><p class="sub" id="save-msg">${msg}</p><div class="buttons">${buttons}</div>`;
+    d.querySelector('#save-cancel').onclick = () => d.close();
+    if (!d.open) d.showModal();
+  };
+  for (let round = 0; round < rounds && !cancelled; round++) {
+    const part = list.slice(round * SAVE_BATCH, (round + 1) * SAVE_BATCH), step = rounds > 1 ? ` (${round + 1}/${rounds})` : '';
+    show('사진 받는 중' + step, '', '<button class="secondary" id="save-cancel">그만두기</button>');
+    let out = [];
+    for (const [i, p] of part.entries()) {
+      if (cancelled) return;
+      d.querySelector('#save-msg').textContent = `원본 사진 ${list.length}장 중 ${round * SAVE_BATCH + i + 1}번째를 받고 있어요. 와이파이를 추천해요.`;
+      const r = await post({ action: 'photo-file', pw, fileId: p.fileId });
+      if (r.error === 'action') { show('아직 준비 중이에요', '사진 저장 기능이 서버에 아직 반영되지 않았어요. 앱스 스크립트를 새 버전으로 배포해 주세요.', '<button class="primary" id="save-cancel">닫기</button>'); return; }
+      if (r.error === 'password' || r.error === 'locked') { show('비밀번호를 확인해 주세요', '더보기에서 다시 로그인한 뒤 저장해 주세요.', '<button class="primary" id="save-cancel">닫기</button>'); return; }
+      if (!r.ok || !r.data) { missed++; continue; }
+      const bin = atob(r.data), bytes = new Uint8Array(bin.length);
+      for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+      out.push(new File([bytes], r.name || p.name || 'photo.jpg', { type: r.mime || 'image/jpeg' }));
+    }
+    if (cancelled) return;
+    if (!out.length) {
+      if (round < rounds - 1) continue;
+      show('사진을 받지 못했어요', '인터넷 연결을 확인하고 다시 해 주세요.', '<button class="primary" id="save-cancel">닫기</button>');
+      return;
+    }
+    const last = round === rounds - 1;
+    show(`사진 ${out.length}장 준비됐어요${step}`, `아래 버튼을 누르고, 뜨는 창에서 <b>${out.length > 1 ? `이미지 ${out.length}개 저장` : '이미지 저장'}</b>을 누르면 사진 앱에 들어가요.${missed ? ` (${missed}장은 받지 못했어요)` : ''}`,
+      `<button class="secondary" id="save-cancel">닫기</button><button class="primary" id="save-go">사진 저장하기</button>`);
+    const shared = await new Promise(res => {
+      d.querySelector('#save-go').onclick = () => {
+        navigator.share({ files: out }).then(() => res(true), e => { if (e?.name !== 'AbortError') d.querySelector('#save-msg').textContent = '공유 창을 열지 못했어요. 잠시 뒤 다시 눌러 주세요.'; });
+      };
+      d.addEventListener('close', () => res(false), { once: true });
+    });
+    out = null;
+    if (!shared) return;
+    if (last) d.close();
+  }
+}
+
 window.TripNative = {
   load: () => localStorage.getItem(STORE) || '',
   save: v => { try { localStorage.setItem(STORE, v); return true; } catch (e) { return false; } },
@@ -120,7 +177,13 @@ window.TripNative = {
     pump();
   },
   retryUploads: () => pump(),
-  download: fileId => { if (/^[\w-]{10,100}$/.test(fileId)) window.open('https://drive.google.com/uc?export=download&id=' + encodeURIComponent(fileId), '_blank', 'noopener'); },
+  download(fileId, name) {
+    if (!/^[\w-]{10,100}$/.test(fileId)) return false;
+    if (!canShareFiles) { driveOpen(fileId); return false; }
+    if (!saving) { saving = []; setTimeout(() => { const list = saving; saving = null; prepareSave(list); }); }
+    saving.push({ fileId, name });
+    return true;
+  },
   api(id, body) { post(JSON.parse(body)).then(r => window.apiResult(id, JSON.stringify(r))); },
 };
 
