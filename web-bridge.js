@@ -1,5 +1,5 @@
 'use strict';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-FH-SJRwzypy5cFKu3iNy4ph6Lf1zCMOncaF-W9DIFdFcXPOY66WOxA6osG9U29Q7Eg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxCuIniJKTHncTuOgnCaUoZx-9KZzhIfHRvmgfAyGKQbWcqGwUDDlpEosN2cecEHBVV0w/exec';
 const TOKEN = 'lZFI9oLNB47unpvI7smWmrNSNvezVpVQ';
 const STORE = 'europe-trip-v1', INITIAL = 'web-initial';
 
