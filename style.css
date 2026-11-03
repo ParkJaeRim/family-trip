@@ -443,3 +443,8 @@ dialog .close{position:absolute;right:12px;top:10px;font-size:25px;min-width:44p
 .large .hero-stay{font-size:17px}
 .blk .bt .bph{margin:0 0 0 6px;padding:0 6px;font-size:11px}
 .large .blk .bt .bph{font-size:13px}
+.event-links .story-mark{align-self:center;min-height:36px;padding:0 12px;border-radius:999px;background:var(--accent-soft);color:var(--ink)}
+.bst{font-style:normal}
+.blk .bt .bst{margin-left:6px}
+.leg .bst{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--ink);vertical-align:2px;white-space:nowrap}
+.large .leg .bst{font-size:14px}

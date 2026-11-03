@@ -23,5 +23,12 @@ window.TripSheet = (()=>{
   return {...old,days,hotels,flights};
  }
  function checklist(raw){const r=rows(raw);if(r[0]?.[0]!=='ID'||r[0]?.[1]!=='준비물')throw Error('준비물 탭 형식이 달라요.');return r.slice(1).filter(x=>x[0]&&x[1]).slice(0,400).map(x=>({id:x[0].slice(0,40),text:x[1].slice(0,200),done:/^(true|1)$/i.test(x[2]||'')}));}
- return {id,rows,parse,checklist,url:''};
+ const CARD_HEAD=['날짜','시간','일정 원문','카드 제목','작은 글씨'];
+ function cardSrc(s){return String(s||'').replace(/\r\n?/g,'\n').trim();}
+ function cards(raw){const r=rows(raw);if(!CARD_HEAD.every((h,i)=>r[0]?.[i]===h))return {};const out={};
+  for(const x of r.slice(1,2000)){const m=String(x[0]||'').match(/(?:\d{4}\D+)?(\d{1,2})\s*[\/.월-]\s*(\d{1,2})/),t=String(x[1]||'').match(/^(\d{1,2})/);const title=String(x[3]||'').slice(0,80);if(!m||!t||Number(t[1])>23||!title||/확인 필요/.test(x[5]||''))continue;
+   const key=`2027-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}|${t[1].padStart(2,'0')}:00`;(out[key]=out[key]||[]).push({src:cardSrc(x[2]),title,sub:String(x[4]||'').slice(0,200)});}
+  return out;}
+ function card(cardsMap,date,e){if(!e||typeof e.raw!=='string')return null;const src=cardSrc(e.raw);return (cardsMap?.[date+'|'+e.time]||[]).find(c=>c.src===src)||null;}
+ return {id,rows,parse,checklist,cards,card,url:''};
 })();

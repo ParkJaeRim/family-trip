@@ -204,10 +204,11 @@ function skeleton(schedRaw, bookRaw) {
   return { version: 1, days, hotels, checklist: [], notes: '', flights: [] };
 }
 async function bootstrap(pw) {
-  const [s, b, c] = await Promise.all(['schedule', 'bookings', 'checklist'].map(kind => post({ action: 'sheet', kind, pw })));
+  const [s, b, c, k] = await Promise.all(['schedule', 'bookings', 'checklist', 'cards'].map(kind => post({ action: 'sheet', kind, pw })));
   if (!s.ok || !b.ok) throw Error(s.error === 'password' || b.error === 'password' ? 'password' : 'network');
   const data = TripSheet.parse(s.text, b.text, skeleton(s.text, b.text), x => x);
   if (c.ok) { try { data.checklist = TripSheet.checklist(c.text); } catch (e) {} }
+  if (k.ok) { try { data.cards = TripSheet.cards(k.text); } catch (e) {} }
   return data;
 }
 function loadApp() { const s = document.createElement('script'); s.src = 'app.js'; document.body.appendChild(s); }
