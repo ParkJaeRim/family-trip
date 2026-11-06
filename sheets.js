@@ -19,7 +19,8 @@ window.TripSheet = (()=>{
    if(h){const region=h.indexOf('지역'),name=h.indexOf('숙소명'),ci=h.indexOf('체크인'),co=h.indexOf('체크아웃');const oldHotel=old.hotels.find(x=>x.city===r[region]);if(!oldHotel)continue;if(ci<0||co<0)throw Error('숙소 날짜 열을 찾지 못했어요.');const checkin=iso(r[ci]),checkout=iso(r[co]);if(checkout<=checkin)throw Error('체크아웃 날짜를 확인해 주세요.');hotels.push({id:oldHotel.id,city:r[region],name:r[name]||'',checkin,checkout,room:h.indexOf('룸타입')>=0?r[h.indexOf('룸타입')]||'':'',platform:'',paid:null,net:null});}
    if(flightHeader){const from=r[flightHeader.indexOf('출발 도시')],to=r[flightHeader.indexOf('도착 도시')];if(!from||!to||from.includes('합계'))continue;const depart=r[flightHeader.indexOf('출발 시각')]||'',arrive=r[flightHeader.indexOf('도착 시각')]||'';const airline=flightHeader.indexOf('항공사');flights.push({route:from+' → '+to,date:depart+' 출발 · '+arrive+' 도착',airline:airline>=0?r[airline]||'':'',detail:from==='바르셀로나'&&iso(depart)!==days.at(-1).date?'시트의 출발 날짜와 여행 마지막 날이 달라요. 항공권을 확인해 주세요.':'편명은 항공권을 확인해 주세요.',paid:null});}
   }
-  if(hotels.length!==7||new Set(hotels.map(h=>h.city)).size!==7||flights.length!==2)throw Error('예약표의 숙소 또는 항공편 행을 확인해 주세요.');
+  if(hotels.length!==7||new Set(hotels.map(h=>h.city)).size!==7||!flights.length||flights.length>10)throw Error('예약표의 숙소 또는 항공편 행을 확인해 주세요.');
+  const when=f=>{const m=f.date.match(/2027\D+(\d{1,2})\D+(\d{1,2})(?:\D+(\d{1,2}):(\d{2}))?/);return m?[m[1],m[2],m[3]||'0',m[4]||'0'].map(x=>x.padStart(2,'0')).join(''):'99999999';};flights.sort((a,b)=>when(a).localeCompare(when(b)));
   return {...old,days,hotels,flights};
  }
  function checklist(raw){const r=rows(raw);if(r[0]?.[0]!=='ID'||r[0]?.[1]!=='준비물')throw Error('준비물 탭 형식이 달라요.');return r.slice(1).filter(x=>x[0]&&x[1]).slice(0,400).map(x=>({id:x[0].slice(0,40),text:x[1].slice(0,200),done:/^(true|1)$/i.test(x[2]||'')}));}
